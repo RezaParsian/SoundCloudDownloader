@@ -1,0 +1,12 @@
+{
+  "name": "soundclouddownloader",
+  "version": "0.0.1",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node --watch main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "description": ""
+}
