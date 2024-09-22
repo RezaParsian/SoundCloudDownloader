@@ -5,8 +5,23 @@
   "scripts": {
     "dev": "node --watch main.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "music",
+    "sound cloud",
+    "download"
+  ],
+  "author": "RezaParsian",
   "license": "MIT",
-  "description": ""
+  "description": "SoundCloudDownloader is a lightweight Node.js script that allows users to download music tracks directly from SoundCloud.",
+  "homepage": "https://github.com/RezaParsian/SoundCloudDownloader",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RezaParsian/SoundCloudDownloader.git"
+  },
+  "dependencies": {
+    "axios": "^1.7.7"
+  },
+  "engines": {
+    "node": ">=12.20.0"
+  }
 }
