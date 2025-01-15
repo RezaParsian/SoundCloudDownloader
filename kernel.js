@@ -107,9 +107,9 @@ async function downloadTrack(url, downloadPath = undefined, method = 'url') {
       responseType: 'arraybuffer'
     });
 
-    const sanitizedArtist = normalizeText(track.artist);
-    const sanitizedTitle = normalizeText(track.title.replace(sanitizedArtist, ''));
-    const sanitizedAlbum = normalizeText(track.album_title.replace(sanitizedArtist, ''));
+    const sanitizedArtist = normalizeText(track?.artist);
+    const sanitizedTitle = normalizeText(track?.title?.replace(sanitizedArtist, ''));
+    const sanitizedAlbum = normalizeText(track?.album_title?.replace(sanitizedArtist, ''));
 
     let fileName = `${sanitizedArtist ? sanitizedArtist + ' - ' : ''}${sanitizedTitle}.mp3`;
 
@@ -123,9 +123,9 @@ async function downloadTrack(url, downloadPath = undefined, method = 'url') {
 
     ffmpeg('/tmp/1.mp3')
         .input(tempArtworkPath)
-        .outputOptions('-metadata', `artist=${sanitizedArtist}`)
-        .outputOptions('-metadata', `title=${sanitizedTitle}`)
-        .outputOptions('-metadata', `album=${sanitizedAlbum}`)
+        .outputOptions('-metadata', `artist=${sanitizedArtist || ''}`)
+        .outputOptions('-metadata', `title=${sanitizedTitle || ''}`)
+        .outputOptions('-metadata', `album=${sanitizedAlbum || ''}`)
         .outputOptions('-metadata', `genre=${track.genre}`)
         .outputOptions('-metadata', `duration=${track.duration}`)
         .outputOptions(['-c:a copy', '-c:v mjpeg', '-map 0', '-map 1', '-id3v2_version 3',])
