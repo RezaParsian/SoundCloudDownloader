@@ -77,6 +77,10 @@ function normalizeText(str) {
       ?.trim();
 }
 
+function  cleanDownloadFile(file){
+  fs.unlinkSync(`/tmp/${file}.jpg`);
+}
+
 async function downloadTrack(url, downloadPath = undefined, method = 'url') {
   if (!downloadPath)
     downloadPath = 'download'
@@ -112,16 +116,17 @@ async function downloadTrack(url, downloadPath = undefined, method = 'url') {
     const sanitizedAlbum = normalizeText(track?.album_title?.replace(sanitizedArtist, ''));
 
     let fileName = `${sanitizedArtist ? sanitizedArtist + ' - ' : ''}${sanitizedTitle}.mp3`;
+    let filenameWithOutPath = `${sanitizedArtist ? sanitizedArtist + ' - ' : ''}${sanitizedTitle}`.replaceAll(' ','_');
 
     if (downloadPath)
       fileName = downloadPath + '/' + fileName;
 
-    fs.writeFileSync('/tmp/1.mp3', Buffer.from(trackData.data));
+    fs.writeFileSync(`/tmp/${filenameWithOutPath}.mp3`, Buffer.from(trackData.data));
 
-    const tempArtworkPath = '/tmp/temp_artwork.jpg';
+    const tempArtworkPath = `/tmp/${filenameWithOutPath}.jpg`;
     await downloadImage(track.cover, tempArtworkPath);
 
-    ffmpeg('/tmp/1.mp3')
+    ffmpeg(`/tmp/${filenameWithOutPath}.mp3`)
         .input(tempArtworkPath)
         .outputOptions('-metadata', `artist=${sanitizedArtist || ''}`)
         .outputOptions('-metadata', `title=${sanitizedTitle || ''}`)
@@ -129,12 +134,14 @@ async function downloadTrack(url, downloadPath = undefined, method = 'url') {
         .outputOptions('-metadata', `genre=${track.genre}`)
         .outputOptions('-metadata', `duration=${track.duration}`)
         .outputOptions(['-c:a copy', '-c:v mjpeg', '-map 0', '-map 1', '-id3v2_version 3',])
-        .save('/tmp/1_.mp3')
+        .save(`/tmp/${filenameWithOutPath}_.mp3`)
         .on('end', () => {
-          fs.renameSync('/tmp/1_.mp3', fileName);
+          fs.renameSync(`/tmp/${filenameWithOutPath}_.mp3`, fileName);
+          cleanDownloadFile(filenameWithOutPath);
         })
         .on('error', (err) => {
           console.error('Error: ', err);
+          cleanDownloadFile(filenameWithOutPath);
         });
 
     return fileName;
