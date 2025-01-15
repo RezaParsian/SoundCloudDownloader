@@ -12,65 +12,31 @@ A Node.js script that downloads music tracks from SoundCloud using the SoundClou
 
 - Node.js (v12 or higher)
 - A SoundCloud API client_id (currently hardcoded but can be replaced with your own)
-
-## Installation
-
-1. Clone this repository:
-
-```bash 
-git clone https://github.com/yourusername/soundcloud-music-downloader.git
-```
-
-2. Navigate to the project directory:
-
-```bash
-cd SoundCloudDownloader
-```
-
-3. Install the dependencies:
-
-```bash
-npm install
-```
-
-4. (Optional) Replace the SoundCloud client_id in the script if necessary:
-
-Open the file and update the `clientId` value:
-
-```javascript
-const clientId = 'your-own-client-id';
-```
+- ffmpeg
 
 ## Usage
 
-1. Run the script by providing a SoundCloud track share link as an argument:
+1. Install the package:
 
-```bash
-node main.js <soundcloud-track-share-link>
+```bash 
+npm i @rezaparsian/soundclouddownloader
 ```
 
-Example:
+2. Import the package:
 
-```bash
-node main.js https://soundcloud.com/artist/track
+```js
+const {downloadTrack} = require('soundclouddownloader');
 ```
 
-2. The track will be downloaded and saved as an .mp3 file in the current directory.
+3. Download a single sound:
 
-## Example Output
-
-```bash
-Your music is ready -> Artist - Track.mp3
+```js
+downloadTrack('<soundcloud-track-share-link>');
 ```
-
-## Error Handling
-
-- If the share URL is invalid or there are network issues, the script will output an error and exit.
-- Ensure that the SoundCloud API client_id has not hit the rate limit if you encounter issues.
-
 ## Dependencies
 
 - Axios: Used to make API requests to SoundCloud.
+- fluent-ffmpeg: Used to add sound info.
 
 ## License
 

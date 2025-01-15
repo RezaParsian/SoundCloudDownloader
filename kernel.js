@@ -1,13 +1,32 @@
 const fs = require('fs');
 const axios = require('axios');
+const ffmpeg = require('fluent-ffmpeg');
 
 const api = 'https://api-v2.soundcloud.com/';
-const clientId = 'yLfooVZK5emWPvRLZQlSuGTO8pof6z4t';
+const clientId = '57GDonO1e5SInnyt8DyMGWwbrg0AOq1H';
 
-async function resolveDataFromUrl(url){
+//todo: az in file zir mishe client_id ro estekhraj kard!
+//https://a-v2.sndcdn.com/assets/0-333b8d87.js
+
+async function downloadImage(url, outputPath) {
+  const response = await axios({
+    url,
+    method: 'GET',
+    responseType: 'stream',
+  });
+
+  return new Promise((resolve, reject) => {
+    const stream = fs.createWriteStream(outputPath);
+    response.data.pipe(stream);
+    stream.on('finish', resolve);
+    stream.on('error', reject);
+  });
+}
+
+async function resolveDataFromUrl(url) {
   const response = await axios.get(api + 'resolve', {
     params: {
-      url: url,
+      url,
       format: 'json',
       client_id: clientId
     }
@@ -16,18 +35,15 @@ async function resolveDataFromUrl(url){
   return response.data;
 }
 async function resolveMusicDataFromUrl(url) {
-  let data = undefined;
-
+  let data = await resolveDataFromUrl(url);
   try {
-
-    data = response.data;
-
     return {
       title: data.title,
-      cover: data.artwork_url,
+      cover: data.artwork_url.replace('-large', '-t500x500'),
       duration: data.duration,
       genre: data.genre,
       artist: data?.publisher_metadata?.artist,
+      album_title: data?.publisher_metadata?.album_title,
       url: data.uri,
       track: data.media.transcodings.find(item => item.format.protocol === 'progressive').url
     };
@@ -41,10 +57,11 @@ function resolveMusicDataFromJson(data) {
   try {
     return {
       title: data.title,
-      cover: data.artwork_url,
+      cover: data.artwork_url.replace('-large', '-t500x500'),
       duration: data.duration,
       genre: data.genre,
       artist: data?.publisher_metadata?.artist,
+      album_title: data?.publisher_metadata?.album_title,
       url: data.uri,
       track: data.media.transcodings.find(item => item.format.protocol === 'progressive').url
     };
@@ -61,6 +78,9 @@ function normalizeText(str) {
 }
 
 async function downloadTrack(url, downloadPath = undefined, method = 'url') {
+  if (!downloadPath)
+    downloadPath = 'download'
+
   if (downloadPath)
     fs.mkdirSync(downloadPath, {recursive: true});
 
@@ -69,12 +89,11 @@ async function downloadTrack(url, downloadPath = undefined, method = 'url') {
 
     if (method === 'url')
       track = await resolveMusicDataFromUrl(url);
-    else {
+    else
       track = resolveMusicDataFromJson(url);
 
       if (!track)
         return ;
-    }
 
     const trackResponse = await axios.get(track.track, {
       params: {
@@ -90,13 +109,33 @@ async function downloadTrack(url, downloadPath = undefined, method = 'url') {
 
     const sanitizedArtist = normalizeText(track.artist);
     const sanitizedTitle = normalizeText(track.title.replace(sanitizedArtist, ''));
+    const sanitizedAlbum = normalizeText(track.album_title.replace(sanitizedArtist, ''));
 
     let fileName = `${sanitizedArtist ? sanitizedArtist + ' - ' : ''}${sanitizedTitle}.mp3`;
 
     if (downloadPath)
       fileName = downloadPath + '/' + fileName;
 
-    fs.writeFileSync(fileName, Buffer.from(trackData.data));
+    fs.writeFileSync('/tmp/1.mp3', Buffer.from(trackData.data));
+
+    const tempArtworkPath = '/tmp/temp_artwork.jpg';
+    await downloadImage(track.cover, tempArtworkPath);
+
+    ffmpeg('/tmp/1.mp3')
+        .input(tempArtworkPath)
+        .outputOptions('-metadata', `artist=${sanitizedArtist}`)
+        .outputOptions('-metadata', `title=${sanitizedTitle}`)
+        .outputOptions('-metadata', `album=${sanitizedAlbum}`)
+        .outputOptions('-metadata', `genre=${track.genre}`)
+        .outputOptions('-metadata', `duration=${track.duration}`)
+        .outputOptions(['-c:a copy', '-c:v mjpeg', '-map 0', '-map 1', '-id3v2_version 3',])
+        .save('/tmp/1_.mp3')
+        .on('end', () => {
+          fs.renameSync('/tmp/1_.mp3', fileName);
+        })
+        .on('error', (err) => {
+          console.error('Error: ', err);
+        });
 
     return fileName;
   } catch (error) {
@@ -112,6 +151,8 @@ function handelInputs(){
     console.error('pass the share link after script name');
     process.exit();
   }
+
+  return arguments;
 }
 
 module.exports = {
