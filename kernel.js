@@ -23,34 +23,35 @@ async function downloadImage(url, outputPath) {
   });
 }
 
+async function followRedirect(url) {
+  return await axios.get(url)
+      .then((response) => {
+        return response.request._redirectable._currentUrl;
+      }).catch((error) => {
+        throw error;
+      });
+}
+
 async function resolveDataFromUrl(url) {
+  if (url.match(/on.soundcloud.com/))
+    url = await followRedirect(url);
+
   const response = await axios.get(api + 'resolve', {
     params: {
       url,
       format: 'json',
       client_id: clientId
     }
+  }).catch((err) => {
+    throw err;
   });
 
   return response.data;
 }
 async function resolveMusicDataFromUrl(url) {
   let data = await resolveDataFromUrl(url);
-  try {
-    return {
-      title: data.title,
-      cover: data.artwork_url.replace('-large', '-t500x500'),
-      duration: data.duration,
-      genre: data.genre,
-      artist: data?.publisher_metadata?.artist,
-      album_title: data?.publisher_metadata?.album_title,
-      url: data.uri,
-      track: data.media.transcodings.find(item => item.format.protocol === 'progressive').url
-    };
-  } catch (error) {
-    console.error('Error fetching music data:', error, data);
-    process.exit();
-  }
+
+  return resolveMusicDataFromJson(data);
 }
 
 function resolveMusicDataFromJson(data) {
@@ -66,7 +67,8 @@ function resolveMusicDataFromJson(data) {
       track: data.media.transcodings.find(item => item.format.protocol === 'progressive').url
     };
   }catch (e){
-    return undefined;
+    console.error('Error fetching music data:', error, data);
+    process.exit();
   }
 }
 
@@ -83,22 +85,22 @@ function  cleanDownloadFile(file){
 
 async function downloadTrack(url, downloadPath = undefined, method = 'url') {
   if (!downloadPath)
-    downloadPath = 'download'
+    downloadPath = 'download';
 
   if (downloadPath)
     fs.mkdirSync(downloadPath, {recursive: true});
 
+  let track = undefined;
+
+  if (method === 'url')
+    track = await resolveMusicDataFromUrl(url);
+  else
+    track = resolveMusicDataFromJson(url);
+
+  if (!track)
+    throw new Error('No track founded.');
+
   try {
-    let track = undefined;
-
-    if (method === 'url')
-      track = await resolveMusicDataFromUrl(url);
-    else
-      track = resolveMusicDataFromJson(url);
-
-      if (!track)
-        return ;
-
     const trackResponse = await axios.get(track.track, {
       params: {
         client_id: clientId
@@ -146,18 +148,15 @@ async function downloadTrack(url, downloadPath = undefined, method = 'url') {
 
     return fileName;
   } catch (error) {
-    console.error('Error downloading the track:', error);
-    process.exit();
+    throw error;
   }
 }
 
 function handelInputs(){
   const arguments = process.argv.slice(2);
 
-  if (!arguments.length) {
-    console.error('pass the share link after script name');
-    process.exit();
-  }
+  if (!arguments.length)
+    throw new Error('pass the share link after script name');
 
   return arguments;
 }
